@@ -3,19 +3,19 @@ using UnityEngine.Pool;
 
 public class CubeSpawner : MonoBehaviour
 {
-    [SerializeField] private GameObject _cubePrefab;
+    [SerializeField] private Cube _cubeStandart;
     [SerializeField] private float _repeatRate;
 
-    private ObjectPool<GameObject> _pool;
+    private ObjectPool<Cube> _pool;
     private int _poolCapacity = 10;
     private int _maxSize = 10;
 
     private void Awake()
     {
-        _pool = new ObjectPool<GameObject>
+        _pool = new ObjectPool<Cube>
             (createFunc: () => Spawn(),
             actionOnGet: (obj) => ActionOnGet(obj),
-            actionOnRelease: (obj) => obj.SetActive(false),
+            actionOnRelease: (obj) => ActionOnRelease(obj),
             actionOnDestroy: (obj) => Destroy(obj),
             collectionCheck: false,
             defaultCapacity: _poolCapacity,
@@ -27,9 +27,9 @@ public class CubeSpawner : MonoBehaviour
         InvokeRepeating(nameof(GetCube), 0.0f, _repeatRate);
     }
 
-    public void ReleaseCube(GameObject gameObject)
+    public void ReleaseCube(Cube cube)
     {
-        _pool.Release(gameObject);
+        _pool.Release(cube);
     }
 
     private void GetCube()
@@ -37,19 +37,28 @@ public class CubeSpawner : MonoBehaviour
         _pool.Get();
     }
 
-    private GameObject Spawn()
+    private Cube Spawn()
     {
         var copyPosition = GetRandomPosition();
         var copyRotation = Quaternion.identity;
-        GameObject cubeCopy = Instantiate(_cubePrefab, copyPosition, copyRotation);
-        
+        Cube cubeCopy = Instantiate(_cubeStandart, copyPosition, copyRotation);
+        cubeCopy.Collided += ReleaseCube;
+
         return cubeCopy;
     }
 
-    private void ActionOnGet(GameObject obj)
+    private void ActionOnGet(Cube obj)
     {
         obj.transform.position = GetRandomPosition();
-        obj.SetActive(true);
+        obj.ReturnSettings();
+        obj.gameObject.SetActive(true);
+        obj.Collided += ReleaseCube;
+    }
+
+    private void ActionOnRelease(Cube obj)
+    {
+        obj.Collided -= ReleaseCube;
+        obj.gameObject.SetActive(false);
     }
 
     private Vector3 GetRandomPosition()

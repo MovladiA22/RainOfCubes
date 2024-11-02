@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Cube : MonoBehaviour
 {
-    [SerializeField] CubeSpawner _cubeSpawner;
+    public event System.Action<Cube> Collided;
 
     private bool _isCollided = false;
     private float _lifeTime;
@@ -17,16 +17,23 @@ public class Cube : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (_isCollided == false)
+        if (_isCollided == false && collision.gameObject.TryGetComponent<Platform>(out Platform platform))
         {
             ProcessCollision();
-
-            Invoke(nameof(Release), _lifeTime);
+            Invoke(nameof(InvokeEvent), _lifeTime);
         }
     }
-    
-    private void Release() =>
-        _cubeSpawner.ReleaseCube(gameObject);
+
+    public void ReturnSettings()
+    {
+        _renderer.material.color = Color.clear;
+        _isCollided = false;
+    }    
+
+    private void InvokeEvent()
+    {
+        Collided?.Invoke(this);
+    }
 
     private void ProcessCollision()
     {
